@@ -93,7 +93,8 @@ def main(options,args):
         fframe.Draw()
         dframe.Draw()
 
-        for fmt in ["png"]:
+#        for fmt in ["png"]:
+        for fmt in ["pdf"]:
             for c in fcanv,dcanv:
                 c.SaveAs( "%s.%s" % ( c.GetName(), fmt )  )
                 

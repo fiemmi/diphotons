@@ -31,9 +31,15 @@ public:
 
     virtual std::string name() const { return ""; };
 
+//JTao
+    void minEvents( double x ) { minEvents_ = x; };
+    double minEvents() { return minEvents_; };
+
 protected:
     type_t type_;
     std::vector<double> categoryYields_;
+//JTao
+    double minEvents_;
 };
 
 // ------------------------------------------------------------------------------------------------

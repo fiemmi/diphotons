@@ -3,6 +3,7 @@
 #include "TMath.h"
 #include "TMinuitMinimizer.h"
 #include <cmath>
+#include "TLatex.h" //JTao
 
 // ---------------------------------------------------------------------------------------------
 GenericFigureOfMerit::GenericFigureOfMerit( std::vector<AbsModelBuilder *> &sig, std::vector<AbsModelBuilder *> &bkg,
@@ -114,7 +115,19 @@ double GenericFigureOfMerit::operator()( double *x, double *p ) const
             }
             for( int idim = 0; idim < ndim_; ++idim ) {
                 if( lastb[idim] < newb[idim] ) { found = false; }
+//JTao
+std::cout<<"JTao : lastb = "<<lastb[idim]<<", newb = "<<newb[idim]<<" and mindim = "<<mindim[idim]<<" for idim = "<<idim<<std::endl;
             }
+//JTao -- checking the yields
+/*
+for( std::vector<AbsModelBuilder *>::const_iterator isig = sigModels_.begin(); isig != sigModels_.end(); ++isig ) {
+  std::cout<<"JTao : Sign Yields " <<(*isig)->getModel()->getCategoryYield( (*isig)->getModel()->getNcat() -1 )<<" for cat "<<(*isig)->getModel()->getNcat() -1<<std::endl;
+}
+for( std::vector<AbsModelBuilder *>::const_iterator ibkg = bkgModels_.begin(); ibkg != bkgModels_.end(); ++ibkg ) {
+  std::cout<<"JTao : Bkg Yields " <<(*ibkg)->getModel()->getCategoryYield( (*ibkg)->getModel()->getNcat() -1 )<<" for cat "<<(*ibkg)->getModel()->getNcat() -1<<std::endl;
+}
+*/
+//===========================
             if( found ) { break; }
             else {
                 double distance = 0.;
@@ -141,6 +154,8 @@ double GenericFigureOfMerit::operator()( double *x, double *p ) const
             /// std::copy( newb.begin(), newb.end(), std::ostream_iterator<double>(std::cout, ",") );
             /// std::cout << std::endl;
             for( std::vector<AbsModelBuilder *>::const_iterator imod = allModels_.begin(); imod != allModels_.end(); ++imod ) {
+//JTao
+            //std::cout<<"JTao : Yields " <<(*imod)->getModel()->getCategoryYield( (*imod)->getModel()->getNcat() -1 )<<std::endl;
                 if( !( *imod )->addBoundary( &newb[0] ) ) {
                     //// std::cout << "adding penalty from model "
                     //// 	  << (*imod)->getModel()->getType()
@@ -165,9 +180,14 @@ double GenericFigureOfMerit::operator()( double *x, double *p ) const
     std::vector<AbsModel *> sigModels, bkgModels;
     for( std::vector<AbsModelBuilder *>::const_iterator isig = sigModels_.begin(); isig != sigModels_.end(); ++isig ) {
         sigModels.push_back( ( *isig )->getModel() );
+//JTao
+//       std::cout<<"JTao : Yields " <<(*isig)->getModel()->getCategoryYield( (*isig)->getModel()->getNcat() -1 )<<std::endl;
+std::cout<<"JTao : Sign Yields " <<(*isig)->getModel()->getCategoryYield( (*isig)->getModel()->getNcat() -1 )<<" for cat "<<(*isig)->getModel()->getNcat() -1<<" with min Nevt="<<(*isig)->getModel()->minEvents()<<std::endl;
     }
     for( std::vector<AbsModelBuilder *>::const_iterator ibkg = bkgModels_.begin(); ibkg != bkgModels_.end(); ++ibkg ) {
         bkgModels.push_back( ( *ibkg )->getModel() );
+//JTao
+std::cout<<"JTao : Bkg Yields " <<(*ibkg)->getModel()->getCategoryYield( (*ibkg)->getModel()->getNcat() -1 )<<" for cat "<<(*ibkg)->getModel()->getNcat() -1<<" with min Nevt="<<(*ibkg)->getModel()->minEvents()<<std::endl;
     }
 
     // compute the FOM
@@ -429,9 +449,18 @@ double CategoryOptimizer::optimizeNCat( int ncat, const double *cutoffs, bool dr
                     }
                 }
                 TGraph gr( nstep, xset, &y[0] );
+                //gr.SetName(""); //JTao
+                gr.SetNameTitle("", ""); //JTao
                 gr.Draw( "APL" );
                 gr.GetXaxis()->SetTitle( minimizer_->VariableName( ipar ).c_str() );
-                canv.SaveAs( Form( "scan_ncat%d_%s.png", ncat,  minimizer_->VariableName( ipar ).c_str() ) );
+  TLatex *lat = new TLatex();
+  lat->SetNDC();
+  lat->SetTextFont(42);
+  lat->DrawLatex(0.82,0.93,"13TeV");
+  lat->DrawLatex(0.159,0.93,"#bf{CMS} #scale[0.75]{#it{Preliminary}}");
+  //JTao
+//                canv.SaveAs( Form( "scan_ncat%d_%s.png", ncat,  minimizer_->VariableName( ipar ).c_str() ) );
+                canv.SaveAs( Form( "scan_ncat%d_%s.pdf", ncat,  minimizer_->VariableName( ipar ).c_str() ) );
                 canv.SaveAs( Form( "scan_ncat%d_%s.C", ncat,  minimizer_->VariableName( ipar ).c_str() ) );
             }
         }

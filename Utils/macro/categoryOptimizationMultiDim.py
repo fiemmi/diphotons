@@ -13,13 +13,33 @@ from copy import deepcopy as copy
 
 objs = []
 
+##JTao
+import ROOT as r
+r.gROOT.ProcessLine(".x hggPaperStyle.C")
+r.gROOT.SetBatch()
+r.gStyle.SetOptStat(0)
+# make a helful TLatex box
+lat = r.TLatex()
+lat.SetTextFont(42)
+lat.SetTextSize(0.045)
+lat.SetLineWidth(2)
+lat.SetTextAlign(11)
+lat.SetNDC()
+def drawGlobals(canv):
+   lat.DrawLatex(0.129+0.03,0.93,"#bf{CMS} #scale[0.75]{#it{Preliminary}}")
+   lat.SetTextSize(0.045)
+   #lat.DrawLatex(0.60,0.93,"2017 (13 TeV)") 
+   lat.DrawLatex(0.70,0.93,"2017 (13 TeV)")
+
 # -----------------------------------------------------------------------------------------------------------
 def loadSettings(cfgs,dest,macros):
     for cfg in cfgs.split(","):
         cf = open(cfg)
         cont = cf.read() % macros
+        print "JTao -- cf : ",cf," cont : ",cont 
         settings = json.loads(cont)
         for k,v in settings.iteritems():
+            print "JTao -- k : ",k," v : ",v
             attr  = getattr(dest,k,None)
             if attr and type(attr) == list:                
                 attr.extend(v)
@@ -70,12 +90,43 @@ def optmizeCats(optimizer,ws,ndim,rng,args,readBack=False,doReduce=False,refit=0
     print "Fitting"
     print 
     for itr in rng:
+        ##JTao - boundaries input boundaries
+        if itr==2 and options.dry:
+            print "JTao -- Ncat = 2 with dry run"
+            #boundaries = (1.0, 0.204, -0.405) #2016 default
+            #boundaries = (1, 0.628, 0.0306) #2016 test
+            #boundaries = (1, 0.236, -0.442)  #2016 test with MC   
+            boundaries = (1, 0.532, 0.297)  #2017 BDT     
+            #boundaries = (1, 0.431, -0.161) #2017 Test
+            summary[itr] =  { "boundaries" : list(boundaries), "ncat": itr }
+        if itr==3 and options.dry:
+            print "JTao -- Ncat = 3 with dry run"
+            #boundaries = (1.0, 0.564, 0.204, -0.405) #2016 default
+            #boundaries = (1, 0.828, 0.628, 0.0306) #2016 test
+            #boundaries = (1, 0.511, 0.236, -0.442)  #2016 test with MC
+            #boundaries = (1, 0.42, 0.182, -0.366) #2017 Test with two steps  
+            #boundaries = (1, 0.802, 0.443, -0.204) #2017 Test
+            boundaries = (1, 0.753, 0.339, -0.393)  #2017 BDT ignore
+            #boundaries = (1, 0.537, 0.275, -0.390)  #2017 BDT Tao Test           
+            summary[itr] =  { "boundaries" : list(boundaries), "ncat": itr }
+        if itr==4 and options.dry:
+            print "JTao -- Ncat = 4 with dry run"
+            #boundaries = (1.0, 0.864, 0.564, 0.204, -0.405) #2016 default
+            #boundaries = (1, 0.944, 0.828, 0.628, 0.0306)  #2016 test
+            #boundaries = (1, 0.934, 0.511, 0.236, -0.442)  #2016 test with MC
+            #boundaries = (1, 0.621, 0.42, 0.182, -0.366) #2017 Test with two steps 
+            #boundaries = (1, 0.918, 0.802, 0.443, -0.204) #2017 Test
+            boundaries = (1, 0.751, 0.452, 0.135, -0.461)  #2017 BDT  
+            #boundaries = (1, 0.537, 0.369, 0.064, -0.58)  #2017 BDT  Tao Test
+            summary[itr] =  { "boundaries" : list(boundaries), "ncat": itr }            
+        ###################################
         if itr in summary:
             val = summary[itr]
             if "selections" in val:
                 for isel in range(len(val["selections"])):
                     optimizer.setOrthoCut(isel, float(val["selections"][isel]))
             boundaries = numpy.array([float(b) for b in val["boundaries"]])
+            print "JTao -- boundaries : ",boundaries
             aargs = args+(boundaries,)
             optimizer.optimizeNCat(itr,*aargs)
         else:
@@ -507,7 +558,9 @@ def optimizeMultiDim(options,args):
     normTF1s[0].Draw("")
     for tf1 in normTF1s[1:]:
         tf1.Draw("SAME")
-    canv2.SaveAs("cat_opt_cdf.png")
+    drawGlobals(canv2) 
+#    canv2.SaveAs("cat_opt_cdf.png")
+    canv2.SaveAs("cat_opt_cdf.pdf")
 
     ### canv3 = ROOT.TCanvas("canv3","canv3")
     ### canv3.cd()
@@ -523,14 +576,18 @@ def optimizeMultiDim(options,args):
     sumxTF1s[0].Draw("hist")
     for tf1 in sumxTF1s[1:]:
         tf1.Draw("hist SAME")
-    canv4.SaveAs("cat_opt_sum_mass.png")
+    drawGlobals(canv4)
+#    canv4.SaveAs("cat_opt_sum_mass.png")
+    canv4.SaveAs("cat_opt_sum_mass.pdf")
 
     canv5 = ROOT.TCanvas("canv5","canv5")
     canv5.cd()
     sumx2TF1s[0].Draw("hist")
     for tf1 in sumx2TF1s[1:]:
         tf1.Draw("hist SAME")
-    canv5.SaveAs("cat_opt_sum_mass2.png")
+    drawGlobals(canv5)
+#    canv5.SaveAs("cat_opt_sum_mass2.png")
+    canv5.SaveAs("cat_opt_sum_mass2.pdf")
 
     objs.append( signals )
     objs.append( backgrounds )
@@ -629,7 +686,10 @@ def optimizeMultiDim(options,args):
                 hbound.Fill(bd,float(jcat))
         cbound = ROOT.TCanvas( "cat_opt_%s" % hbound.GetName(), "cat_opt_%s" % hbound.GetName() )
         cbound.cd()
+        hbound.SetTitle("")
+        hbound.GetXaxis().SetTitle("BDT output");
         hbound.Draw("box")
+        drawGlobals(cbound)
 
         cbound_pj = ROOT.TCanvas( "cat_opt_%s_pj" % hbound.GetName(),  "cat_opt_%s_pj" %  hbound.GetName() )
         cbound_pj.cd()
@@ -637,6 +697,8 @@ def optimizeMultiDim(options,args):
         ### hbound_pj = hbound.ProjectionY()
         ### hbound_pj.Draw()
         ## hbound_pj.Draw("box")
+        hbound_pj.SetTitle("")
+        hbound_pj.SetStats(0)
         hbound_pj.SetFillColor(ROOT.kBlack)
         hbound_pj.SetLineColor(ROOT.kBlack)
         objs.append(hbound)
@@ -644,16 +706,28 @@ def optimizeMultiDim(options,args):
         objs.append(cbound)
         objs.append(cbound_pj)
         maxy = 0.
+#JTao
+        leg = r.TLegend(0.2,0.75,0.35,0.88) 
+        sigpdfcolor = 4 #JTao: ROOT.kBlue
         pdfs = []
         for sig in signals:
             pdf = sig.getPdf(idim)
             pdf.Scale(1./pdf.Integral())
-            pdf.SetLineColor(ROOT.kBlue)
+            #pdf.SetLineColor(ROOT.kBlue)
+            pdf.SetLineColor(sigpdfcolor)
+            sigpdfcolor = sigpdfcolor + 2   
             pdfs.append(pdf)
             pdf.GetXaxis().SetRangeUser(minNrm,maxNrm)
             maxy = max(maxy,pdf.GetMaximum())
             pdf.GetXaxis().SetRangeUser(minX,maxX)
             objs.append(pdf)
+##JTao
+            myname = pdf.GetName()
+#            print "  JTao: name - ",myname
+            myname = myname.replace("hsparse_","")
+            myname = myname.replace("Model_proj_0","")
+            myname = myname.replace("sig","sig ")  
+            leg.AddEntry(pdf,myname,'L') ##JTao
         for bkg in backgrounds:
             pdf = bkg.getPdf(idim)
             pdf.Scale(1./pdf.Integral())
@@ -663,7 +737,12 @@ def optimizeMultiDim(options,args):
             maxy = max(maxy,pdf.GetMaximum())
             pdf.GetXaxis().SetRangeUser(minX,maxX)
             objs.append(pdf)
-            
+##JTao
+            myname = pdf.GetName()
+#            print "  JTao: name - ",myname
+            myname = myname.replace("hsparse_","")  
+            myname = myname.replace("Model_proj_0","")
+            leg.AddEntry(pdf,myname,'L') ##JTao
         ### hbound_pj.Scale(maxy*hbound_pj.GetMaximum())
         ### hbound_pj.GetYaxis().SetRangeUser(0.,1.1*maxy)
         ### cbound_pj.RedrawAxis()
@@ -674,13 +753,18 @@ def optimizeMultiDim(options,args):
         hframe_pj.GetYaxis().SetRangeUser(0,float(maxcat)+2)
         hframe_pj.GetYaxis().SetNdivisions(500+int(maxcat)+2)
         cbound_pj.SetGridy()
+        hframe_pj.GetXaxis().SetTitle("BDT output");
+        hframe_pj.SetTitle("") 
         hframe_pj.Draw("hist")
         for pdf in pdfs[1:]:
             pdf.Draw("hist same")
         ## hbound_pj.GetYaxis().SetNdivisions(500+ncat+3)
+        leg.Draw("same") ##JTao
         hbound_pj.Draw("box same")
-        
-        for fmt in "png", "C":
+        drawGlobals(cbound_pj)
+
+#        for fmt in "png", "C":
+        for fmt in "pdf", "C":
             cbound.SaveAs("%s.%s" % (cbound.GetName(),fmt) )
             cbound_pj.SaveAs("%s.%s" % (cbound_pj.GetName(),fmt) )
             
@@ -703,6 +787,7 @@ def optimizeMultiDim(options,args):
         csel = ROOT.TCanvas( "cat_opt_%s" % hsel.GetName(), "cat_opt_%s" % hsel.GetName() )
         csel.cd()
         hsel.Draw("box")
+        drawGlobals(csel)
 
         csel_pj = ROOT.TCanvas( "cat_opt_%s_pj" % hsel.GetName(),  "cat_opt_%s_pj" %  hsel.GetName() )
         csel_pj.cd()
@@ -743,9 +828,10 @@ def optimizeMultiDim(options,args):
         hsel_pj.GetYaxis().SetNdivisions(500+ncat+3)
         csel_pj.SetGridy()
         hsel_pj.Draw("box same")
+        drawGlobals(csel_pj)
 
-
-        for fmt in "png", "C":
+#        for fmt in "png", "C":
+        for fmt in "pdf", "C":
             csel.SaveAs("%s.%s" % (csel.GetName(),fmt) )
             csel_pj.SaveAs("%s.%s" % (csel.GetName(),fmt) )
 
@@ -756,8 +842,10 @@ def optimizeMultiDim(options,args):
     canv9.cd()
     grS.SetMarkerStyle(ROOT.kFullCircle)
     grS.Draw("AP")
-    
-    canv9.SaveAs("cat_opt_fom.png")
+
+    drawGlobals(canv9)    
+#    canv9.SaveAs("cat_opt_fom.png")
+    canv9.SaveAs("cat_opt_fom.pdf")
     canv9.SaveAs("cat_opt_fom.C")
 
     tmpname = tmp.GetName()
@@ -913,6 +1001,7 @@ if __name__ == "__main__":
         print toks
         macros[toks[0]] = toks[1]
     for sets in options.jsons:
+        print "JTao-- sets: ",sets," options: ",options," and macros: ",macros 
         loadSettings(sets, options, macros)
 
     if options.infile == "":

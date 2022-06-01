@@ -28,6 +28,7 @@
 #include "TTree.h"
 #include "TTreeFormula.h"
 #include "TMatrix.h"
+#include "TLatex.h" //JTao
 
 #include <algorithm>
 #include <cmath>
@@ -421,7 +422,7 @@ void SecondOrderModel::bookShape( int icat )
     assert( icat == ( int )categoryPdfs_.size() );
     RooRealVar *norm = new RooRealVar( Form( "%s_cat_model_norm0_%d", name_.c_str(), icat ),
                                        Form( "%s_cat_model_norm0_%d", name_.c_str(), icat ), categoryYields_[icat],
-                                       0., 1e+6 );
+                                       0., 1e+9 ); //JTao : change 1e+6 to 1e+9; have more MC(data) in Run2; important else norm is constant then problem due to "Number of free parameters from FitConfig" different from "Number of free parameters from Minimizer" 
     owned_.addOwned( *norm );
 
     RooAbsPdf *pdf = 0;
@@ -752,6 +753,7 @@ double SimpleShapeFomProvider::operator()( std::vector<AbsModel *> sig, std::vec
             RooMinimizer minimsb( *( nlli[ibin] ) );
             minimsb.setMinimizerType( minimizer_.c_str() );
             minimsb.setPrintLevel( -1 ); //-1
+            //minimsb.setPrintLevel( 2 ); //JTao : 2->ExtraForProblem
             sconverged[ibin] = false;
             for( int ii = minStrategy_; ii < 3; ++ii ) {
                 minimsb.setStrategy( ii );
@@ -761,7 +763,7 @@ double SimpleShapeFomProvider::operator()( std::vector<AbsModel *> sig, std::vec
                 }
             }
             double minNllsb = nlli[ibin]->getVal();
-            /// std::cout << "mu=1 minNll=" << minNllsb << " poi0=" << pois_[0]->getVal() << " sconverged=" << sconverged[ibin] << std::endl;
+            std::cout << "mu=1 minNll=" << minNllsb << " poi0=" << pois_[0]->getVal() << " sconverged=" << sconverged[ibin] << std::endl;
 
             // 0.8*S+B fit
             for( size_t ipoi = 0; ipoi < pois_.size(); ++ipoi ) {
@@ -914,7 +916,7 @@ double SimpleShapeFomProvider::operator()( std::vector<AbsModel *> sig, std::vec
             }
         }
         double minNllsb = nll->getVal();
-        /// std::cout << "mu=1 minNll=" << minNllsb << " poi0=" << pois_[0]->getVal() << " sconverged=" << sconvergedSignif << std::endl;
+        std::cout << "JTao S+B : mu=1 minNll=" << minNllsb << " poi0=" << pois_[0]->getVal() << " sconverged=" << sconvergedSignif << std::endl;
 
 
         std::vector<RooPlot *> frames;
@@ -947,7 +949,7 @@ double SimpleShapeFomProvider::operator()( std::vector<AbsModel *> sig, std::vec
             }
         }
         double minNllb = nll->getVal();
-        /// std::cout << "mu=0 minNll=" << minNllb << " poi0=" << pois_[0]->getVal() << " bconvergedSignif=" << bconvergedSignif << std::endl;
+        std::cout << "JTao B-only : mu=0 minNll=" << minNllb << " poi0=" << pois_[0]->getVal() << " bconvergedSignif=" << bconvergedSignif << std::endl;
 
 
         double qA = -2.*( minNllb - minNllsb );
@@ -975,11 +977,20 @@ double SimpleShapeFomProvider::operator()( std::vector<AbsModel *> sig, std::vec
                     TCanvas *canvas = new TCanvas( Form( "cat_%d_%d_%d", ( int )ncat, ( int )icat, ( int )iSubcat ), Form( "cat_%d_%d_%d", ( int )ncat, ( int )icat,
                                                    ( int )iSubcat ) );
                     canvas->cd();
+                    frame->SetName(""); //JTao
                     frame->Draw();
+  TLatex *lat = new TLatex();
+  lat->SetNDC();
+  lat->SetTextFont(42);
+  lat->DrawLatex(0.82,0.93,"13TeV");
+  lat->DrawLatex(0.159,0.93,"#bf{CMS} #scale[0.75]{#it{Preliminary}}");
+  //JTao
                     if( nSubcats_ > 0 ) {
-                        canvas->SaveAs( Form( "cat_%d_%d_%d.png", ( int )ncat, ( int )icat, ( int )iSubcat ) );
+//                        canvas->SaveAs( Form( "cat_%d_%d_%d.png", ( int )ncat, ( int )icat, ( int )iSubcat ) );
+                        canvas->SaveAs( Form( "cat_%d_%d_%d.pdf", ( int )ncat, ( int )icat, ( int )iSubcat ) );
                     } else {
-                        canvas->SaveAs( Form( "cat_%d_%d.png", ( int )ncat, ( int )icat ) );
+//                        canvas->SaveAs( Form( "cat_%d_%d.png", ( int )ncat, ( int )icat ) );
+                        canvas->SaveAs( Form( "cat_%d_%d.pdf", ( int )ncat, ( int )icat ) );  
                     }
                 }
             }
