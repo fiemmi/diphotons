@@ -1,0 +1,54 @@
+{ 
+    "#" : "This is a JSON file to configure categoryOptimizationMultiDim.py script",
+        "#" : "Comments are not supported in JSON.",
+        "#" : "The trick here is to encapsulate them as well formatted input with key #",
+        "#" : "Configuration items are commented prepending an # to the name (any other character would work)",
+        
+        "###" : "----------------------------------------------------------------------------------------------",
+        "observable"          : ["CMS_hgg_mass",[100,180,0.5],125],
+        "settings"            : [["floatLast",[1]],["setScan",[10,1,1]]],
+        
+        "###" : "----------------------------------------------------------------------------------------------",
+        "##variables"           : [["diphoMVA", [-1.0,1.0,0.02],0.6]], "#" : "step 0.01 to 0.001/0.02",
+        "variables"           : [["diphoMVA", [-1.0,1.0,0.01],0.9]], "#" : "step 0.01",
+        "range"               : [2,3,4,5,6], "#" : "number of categories to optimize",	
+        "selection"           : "1",
+        "selectioncuts"       : [],             
+        "###" : "Signal and background processes",
+        "###" : "----------------------------------------------------------------------------------------------",
+        "signals"             : {
+            "sigRv"           : [["Sig125","abs(dZ)<1."]
+                                 ],
+            "sigWv"           : [["Sig125","abs(dZ)>1."]
+                                 ]
+            },
+        "#signals"             : {
+            "sig"           : [["TestTree","classID == 0 && Entry$%%1==0"]
+                                 ]
+            },
+        
+        "##backgrounds"        : { 
+        "bkg"                 : [["data","1"]
+                                 ]
+            },
+        "##" : "No cut for diphoton (pp), pf and ff from GJet and QCD",
+        "backgrounds"         : { 
+        "bkg"                 : [["pp","1"],
+                                 ["DataDriven_QCD","1"]
+                                 ]
+            },
+        
+        "weights"             : { "sigRv" : "(41.5*weight)", "sigWv" : "(41.5*weight)", "bkg" : "(weight*Norm_SFs)"},
+        "##" : "'Ultraviolet' cutoff in number of events",
+        "minevents"           : { "sigRv" : 0.1, "sigWv" : 0.01, "bkg" : 100.0  },
+        "##minevents"           : { "sig" : 0.1, "bkg" : 10.0  },
+        "###" : "----------------------------------------------------------------------------------------------",
+        "##" : "When loading previous steps only look at ncat in [2:5]",
+        "mincat"              : 2,
+        "##maxcat"              : 4,
+        "maxcat"              : 6,
+        "#" : "No direct cutoff on categorization variable (see below for minevents)",
+        "#" : "direct cutoff on categorization variable (minevents doesn't work)",
+        "##cutoff"              : 0.0,
+        "cutoff"              : 0.0
+}
