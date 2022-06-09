@@ -64,7 +64,7 @@ def getBoundaries(ndim,ncat,optimizer, summary, overwrite=False):
     objs.append((boundaries,selections))
 
 # -----------------------------------------------------------------------------------------------------------
-def optmizeCats(optimizer,ws,ndim,rng,args,readBack=False,doReduce=False,refit=0,settings=None):
+def optimizeCats(optimizer,ws,ndim,rng,args,readBack=False,doReduce=False,refit=0,settings=None):
     
     summary = {}
     if readBack:
@@ -645,7 +645,7 @@ def optimizeMultiDim(options,args):
         optimizer.addBackground( bkgModel )
     optimizer.setFigureOfMerit( fom )
 
-    summary = optmizeCats( optimizer, ws, varlist.getSize(),
+    summary = optimizeCats( optimizer, ws, varlist.getSize(),
                            options.range, (cutoffs,options.dry,True,), options.cont, options.reduce, options.refit,
                            storeOpts )
     
