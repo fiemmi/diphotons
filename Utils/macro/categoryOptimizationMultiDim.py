@@ -457,10 +457,10 @@ def optimizeMultiDim(options,args):
     ### ##########################################################################################################
     ### Minimizer and optimizer
     ###
-    minimizer = ROOT.TMinuitMinimizer("Minimize")
+    minimizer = ROOT.TMinuitMinimizer("Minimize") #choose minimization algorithm. Choices: Migrad (default), Simplex, Minimize (combined Migrad + Simplex)
     ## minimizer.SetPrintLevel(999)
     ## minimizer = ROOT.Minuit2.Minuit2Minimizer()
-    optimizer = ROOT.CategoryOptimizer( minimizer, ndim )
+    optimizer = ROOT.CategoryOptimizer( minimizer, ndim ) #loaded in main from diphotons/Utils/interface/CategoryOptimizer.h
     for isel in range(sellist.getSize()):
         sel = sellist[isel]
         print sel.GetName(), options.fix

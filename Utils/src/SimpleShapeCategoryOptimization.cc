@@ -511,22 +511,22 @@ void throwAsimov( double nexp, RooDataHist *asimov, RooAbsPdf *pdf, RooRealVar *
 {
     asimov->reset();
     RooArgSet mset( *x );
-    pdf->fillDataHist( asimov, &mset, 1, false );
+    pdf->fillDataHist( asimov, &mset, 1, false ); //fill asimov with values sampled from pdf
 
     for( int i = 0 ; i < asimov->numEntries() ; i++ ) {
         asimov->get( i ) ;
 
         // Expected data, multiply p.d.f by nEvents
-        Double_t w = asimov->weight() * nexp;
-        asimov->set( w, sqrt( w ) );
+        Double_t w = asimov->weight() * nexp; //weight() returns the weight of the last bin reuested with get()
+        asimov->set( w, sqrt( w ) ); // set bin content and bin error
     }
-
+    
+    //for some reason that I do not fully understand, correct each bin to get nexp as a normalization
     Double_t corr = nexp / asimov->sumEntries() ;
     for( int i = 0 ; i < asimov->numEntries() ; i++ ) {
         RooArgSet theSet = *( asimov->get( i ) );
         asimov->set( asimov->weight()*corr, sqrt( asimov->weight()*corr ) );
     }
-
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -563,8 +563,9 @@ double SimpleShapeFomProvider::operator()( std::vector<AbsModel *> sig, std::vec
     cout << "AAAAAAAAAAAAA "<< sig.size() << endl;
     cout << "AAAAAAAAAAAAA "<< sig[0] << endl;
     size_t ncat = sig[0]->getNcat();
-    size_t totcat = ncat * nSubcats_;
-
+    cout << "ncat: " << ncat << endl;
+    size_t totcat = ncat * nSubcats_; //always equal to ncat, since nSubcats_ == 1 (using standard value from constructor in header file)
+    
     RooCategory roocat( "SimpleShapeFomCat", "" );
     std::vector<std::pair<std::string, RooAbsData *> >catData;
     std::vector<RooRealVar *> normsToFix;
@@ -582,20 +583,26 @@ double SimpleShapeFomProvider::operator()( std::vector<AbsModel *> sig, std::vec
         if( debug_ ) {
             std::cout << "\nCategory: " << icat << " event yields\n";
         }
-        if( nSubcats_ * icat >= asimovs.size() ) {
-            for( size_t iSubcat = 0; iSubcat < nSubcats_; iSubcat++ ) {
-                asimovs.push_back( RooDataHist( Form( "asimovhist_%d_%d", ( int )icat, ( int )iSubcat ), "", *( sig[0]->getX() ) ) );
+        if( nSubcats_ * icat >= asimovs.size() ) { // since asimovs is an empty vector at the beginning, and nSubcats_==1, and asimovs gets pushed back one single element in the following, this condition will be always true and as a result, in the end asimovs.size() will be equal to ncat
+            for( size_t iSubcat = 0; iSubcat < nSubcats_; iSubcat++ ) { // nSubcats_==1, thus do this just once for each icat
+                asimovs.push_back( RooDataHist( Form( "asimovhist_%d_%d", ( int )icat, ( int )iSubcat ), "", *( sig[0]->getX() ) ) ); // sig[0]->getX() returns a pointer to a RooRealVar (see header file)
             }
-        }
+        } 
 
-        bool buildPdf = ( nSubcats_ * icat >= pdfs.size() );
-        std::vector<RooArgList> lpdfs( nSubcats_ ), bpdfs( nSubcats_ );
+        bool buildPdf = ( nSubcats_ * icat >= pdfs.size() ); 
+        cout << "buildPdf: " << buildPdf << endl;
+        
+        std::vector<RooArgList> lpdfs( nSubcats_ ), bpdfs( nSubcats_ ); //vector of RooArgList, i.e., of container objects that can hold RooAbsArg objects. 
 
         std::vector<double> ntot( nSubcats_, 0. );
         //// std::cout << "cat " << icat << std::endl;
+        
+        cout << "sig.size(): " << sig.size() << endl; //2
+        cout << "bkg.size(): " << bkg.size() << endl; //1
+        
         for( size_t iSig = 0; iSig < sig.size(); iSig++ ) {
-            size_t iSubcat = iSig % nSubcats_;
-            ntot[iSubcat] += sig[iSig]->getCategoryYield( icat );
+            size_t iSubcat = iSig % nSubcats_; //since nSubcats_==1 and sig.size()==2, iSubcat is always 0
+            ntot[iSubcat] += sig[iSig]->getCategoryYield( icat ); //add to ntot the category yield coming from each component of signal
 
             //If very low stat in the EE, do not include in the lilelihood
             //// if (CheckEndcap){
@@ -618,7 +625,7 @@ double SimpleShapeFomProvider::operator()( std::vector<AbsModel *> sig, std::vec
         }
         for( size_t iBkg = 0; iBkg < bkg.size(); iBkg++ ) {
             size_t iSubcat = iBkg % nSubcats_;
-            ntot[iSubcat] += bkg[iBkg]->getCategoryYield( icat );
+            ntot[iSubcat] += bkg[iBkg]->getCategoryYield( icat ); //add to ntot the category yield coming from each component of bakground (it's actually only one component)
             if( debug_ ) {
                 std::cout << "    " << bkg[iBkg]->name() << " (subcat " << iSubcat << "): " << bkg[iBkg]->getCategoryYield( icat ) << "\n";
             }
@@ -632,7 +639,7 @@ double SimpleShapeFomProvider::operator()( std::vector<AbsModel *> sig, std::vec
             std::cout << std::endl;
         }
 
-        if( buildPdf ) {
+        if( buildPdf ) { // add the sig+bkg pdf to the pdfs vector
             for( size_t iSubcat = 0; iSubcat < nSubcats_; iSubcat++ ) {
                 pdfs.push_back( RooAddPdf( Form( "sbpdf_%d_%d", ( int )icat, ( int )iSubcat ), "", lpdfs[iSubcat] ) );
             }
@@ -642,13 +649,14 @@ double SimpleShapeFomProvider::operator()( std::vector<AbsModel *> sig, std::vec
             //// std::cout << "Throwing Asymov " << iSubcat << " " << nSubcats_*icat + iSubcat << " " << ntot[iSubcat] << " " <<  &asimovs[nSubcats_ * icat + iSubcat] << " " <<
             ////           &pdfs[nSubcats_ * icat + iSubcat] << std::endl;
 
-            throwAsimov( ntot[iSubcat], &asimovs[nSubcats_ * icat + iSubcat], &pdfs[nSubcats_ * icat + iSubcat], sig[0]->getX() );
+            throwAsimov( ntot[iSubcat], &asimovs[nSubcats_ * icat + iSubcat], &pdfs[nSubcats_ * icat + iSubcat], sig[0]->getX() ); //create dataset sampling from the sig+bkg pdf and store it into asimovs
             roocat.defineType( Form( "cat_%d_%d", ( int )icat, ( int )iSubcat ) );
             //// roosim.addPdf( pdfs[nSubCats_*icat+iSubcat], Form("cat_%d_%d",icat,iSubcat) );
 
-            catData.push_back( std::make_pair( Form( "cat_%d_%d", ( int )icat, ( int )iSubcat ), &asimovs[nSubcats_ * icat + iSubcat] ) );
+            catData.push_back( std::make_pair( Form( "cat_%d_%d", ( int )icat, ( int )iSubcat ), &asimovs[nSubcats_ * icat + iSubcat] ) ); //store into cat data a map between string names and asimov datasets
         }
     }
+
 
     RooAbsReal *nll;
     RooAbsReal **nlli = new RooAbsReal*[ncat];
@@ -656,7 +664,6 @@ double SimpleShapeFomProvider::operator()( std::vector<AbsModel *> sig, std::vec
     std::vector<RooAbsData *> garbageData;
 
     if( useRooSimultaneous_ ) {
-
         RooSimultaneous *roosim = new RooSimultaneous( "SimpleShapeFomFit", "", roocat );
         garbageColl.push_back( roosim );
         //// RooRealVar * weight = new RooRealVar("weight","weight",1.);
@@ -680,16 +687,16 @@ double SimpleShapeFomProvider::operator()( std::vector<AbsModel *> sig, std::vec
         garbageColl.push_back( nll );
 
     } else {
-        if( !doDeltaMuBinOptim_ ) {
-            RooArgSet nlls;
+        if( !doDeltaMuBinOptim_ ) {// WE ARE ENTERING HERE
+            RooArgSet nlls; //negative log-likelihoods
             for( size_t icat = 0; icat < totcat; ++icat ) {
                 //// RooAbsReal *inll = pdfs[icat].createNLL( asimovs[icat], RooFit::Extended() );
                 RooAbsReal *inll = ( constraints_.getSize() > 0 ?
                                      pdfs[icat].createNLL( asimovs[icat], RooFit::Extended(),
                                              RooFit::ExternalConstraints( constraints_ ) ) :
                                      pdfs[icat].createNLL( asimovs[icat], RooFit::Extended() )
-                                   );
-                nlls.add( *inll );
+                                     ); //create a negative log-likelihood based on asimovs[icat] (with contraints or not)
+                nlls.add( *inll ); //ad the negative log-likelihood to the set of nlls
                 garbageColl.push_back( inll );
             }
             //// if( constraints_.getSize() > 0 ) {
@@ -699,7 +706,7 @@ double SimpleShapeFomProvider::operator()( std::vector<AbsModel *> sig, std::vec
             //// 	//// constraints_.Print("V");
             //// 	//// constrained_.Print("V");
             //// }
-            nll = new RooAddition( "nll", "nll", nlls );
+            nll = new RooAddition( "nll", "nll", nlls ); //add together the negative log-likelihoods
             //// nll->Print("V");
             garbageColl.push_back( nll );
         } else if( doDeltaMuBinOptim_ ) {
@@ -897,10 +904,11 @@ double SimpleShapeFomProvider::operator()( std::vector<AbsModel *> sig, std::vec
         ret = Mes;
     }
 
-    if( !doDeltaMuBinOptim_ ) {
+    if( !doDeltaMuBinOptim_ ) { //WE ARE ENTERING HERE
 
 
         // S+B fit
+        //cout << "pois_.size(): " << pois_.size() << endl; //1
         for( size_t ipoi = 0; ipoi < pois_.size(); ++ipoi ) {
             pois_[ipoi]->setVal( 1. );
             pois_[ipoi]->setConstant( false );
